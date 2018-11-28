@@ -1,11 +1,11 @@
 from __future__                import division
-import numpy
+import numpy                   as np
 import pandas                  as pd
 import matplotlib.pyplot       as plt
 
 from sklearn.model_selection   import cross_val_score
 from sklearn.model_selection   import KFold
-from sklearn.metrics           import accuracy_score
+from sklearn.metrics           import accuracy_score, roc_auc_score, cohen_kappa_score
 from sklearn.ensemble          import RandomForestClassifier
 from sklearn.neighbors         import KNeighborsClassifier
 from sklearn.preprocessing     import StandardScaler
@@ -16,7 +16,7 @@ from sklearn.svm               import SVC
 
 
 
-def GetData():
+def GetData():#returns dataframe of all data including target class
 
     #LOAD IN FILE
     btcExcel = "btc.xlsx"
@@ -50,10 +50,14 @@ def GetData():
     #for i in range(len(bitcoin)):
     #    print (bitcoin['price(USD)'].iloc[i],bitcoin['y'].iloc[i])
 
+    return bitcoin
+
+def PrepData(dataframe):#splits data into folds and returns test and train sets
+
     #Lets make some FOLDS!
     kf = KFold(n_splits=5)
-    for train_index, test_index in kf.split(bitcoin):
-        train, test = bitcoin.iloc[train_index], bitcoin.iloc[test_index]
+    for train_index, test_index in kf.split(dataframe):
+        train, test = dataframe.iloc[train_index], dataframe.iloc[test_index]
 
 
     #Now split into x and y
@@ -71,12 +75,12 @@ def GetData():
 
 
 
-
-def Forests(X_train,X_test,Y_train,Y_test):
-    results = []
+def ForestTester(X_train,X_test,Y_train,Y_test):
+    accuracy = []
+    auroc = []
+    kappa = []
     #t_results = []
-    for n in range(30,100):#for number of estimators
-        #print n
+    for n in range(1,101):  #for number of estimators
         #build forest
         rfc = RandomForestClassifier(n_estimators=n)
         rfc.fit(X_train,Y_train)
@@ -86,54 +90,92 @@ def Forests(X_train,X_test,Y_train,Y_test):
         Y_pred = rfc.predict(X_test)#out of sample data
         #Yt_pred = rfc.predict(X_train)#with training data
 
-        #get some metrics
-        accuracy = accuracy_score(Y_test,Y_pred)#out of sample accuracy
-        #t_accuracy = accuracy_score(Y_train,Yt_pred)#training data accuracy
+        y_score = rfc.predict_proba(X_test)#scores for stats
+        acc = accuracy_score(Y_test,Y_pred)
+        auc = roc_auc_score(Y_test,y_score[:,1])
+        kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        #print "n:",n, acc
+        accuracy.append(acc)
+        auroc.append(auc)
+        kappa.append(kappa_score)
 
-        feature_imp = pd.Series(rfc.feature_importances_,index=X_train.columns.values)
-
-        results.append((n,accuracy,feature_imp))
-        #t_results.append((n,t_accuracy))
-
-
-
-
-
-    x = []
-    y = []
-    tx = []
-    ty = []
-    for i in range(len(results)):
-        #print results[i][0:2]
-        x.append(results[i][0])#number of estimators
-        y.append(results[i][1])#accuracy
-    #for i in range(len(t_results)):
-    #    tx.append(t_results[i][0])
-    #    ty.append(t_results[i][1])
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
 
 
-    plt.figure(1)#Accuracy and number of estimators
-    plt.plot(x[:100],y[:100])
-    plt.suptitle('Accuracy and Number of Estimators')
-    plt.xlabel('Number of Estimators')
+    return results
+
+
+
+def NumberNeighborsTester(X_train,X_test,Y_train,Y_test):
+    accuracy = []
+    auroc = []
+    kappa = []
+
+    for n in range(1,101):#number of neighbors to be tested
+
+        neigh_uni = KNeighborsClassifier(n_neighbors=n)#uniform weights
+        #neigh_dis = KNeighborsClassifier(n_neighbors=n,weights='distance')#weights based on distance
+
+        neigh_uni.fit(X_train,Y_train)
+
+
+        Y_pred = neigh_uni.predict(X_test)
+
+        y_score = neigh_uni.predict_proba(X_test)#scores for stats
+        acc = accuracy_score(Y_test,Y_pred)
+        auc = roc_auc_score(Y_test,y_score[:,1])
+        kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        #print "n:",n, acc
+        accuracy.append(acc)
+        auroc.append(auc)
+        kappa.append(kappa_score)
+
+
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+
+
+    return results
+
+
+def WeightsNeighborsTester(X_train,X_test,Y_train,Y_test):
+#tested kd and ball tree, no difference with leaf size
+    #for n in range(2):
+
+    neigh_uni = KNeighborsClassifier(n_neighbors=28,weights='uniform')#uniform weights
+    neigh_dis = KNeighborsClassifier(n_neighbors=28,weights='distance')#weights based on distance
+
+    neigh_uni.fit(X_train,Y_train)
+    neigh_dis.fit(X_train,Y_train)
+
+    Yu_pred = neigh_uni.predict(X_test)
+    acc_uni = accuracy_score(Y_test,Yu_pred)
+    Yd_pred = neigh_dis.predict(X_test)
+    acc_dis = accuracy_score(Y_test,Yd_pred)
+
+    print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
+
+    results_uni.append(acc_uni)
+    results_dis.append(acc_dis)
+        #3 Neighbors is the best for uniform! sharp drop from 3-4 for uniform, 3-4 for distance is good
+
+    n = [i for i in range(1,101)]
+    plt.figure(1)#Accuracy and number of neighbors
+    plt.plot(n[:],results_uni[:],color='b')
+    plt.plot(n[:],results_dis[:],color='r')
+    plt.suptitle('Accuracy and Leaf Size (3 Neighbors)')
+    plt.xlabel('Leaf Size')
     plt.ylabel('Accuracy')
-    plt.figure(2)#Feauture importances from most recent
-    plt.suptitle('Feature Importances')
-    plt.barh(X_train.columns.values,rfc.feature_importances_)
     plt.show()
 
 
-#max from results is 37?
-#feature importance lowest is median fee then average difficulty
 
     return
 
-
-def Neighbors(X_train,X_test,Y_train,Y_test):
-    results_uni = []
-    results_dis = []
-
-    #pca doesn't work too well
+def PCANeighborsTester(X_train,X_test,Y_train,Y_test):
+    #pca
+    accuracy = []
+    auroc = []
+    kappa = []
     for n in range(1,len(X_train.columns)):#number of components to be tested
 
         #first scale our attributes
@@ -146,90 +188,42 @@ def Neighbors(X_train,X_test,Y_train,Y_test):
         train_components = pca.transform(x_train)#now reduce dimensionality
         test_components = pca.transform(x_test)
 
-        neigh_uni = KNeighborsClassifier(n_neighbors=3)#uniform weights
-        neigh_dis = KNeighborsClassifier(n_neighbors=3,weights='distance')#weights based on distance
-
-        neigh_uni.fit(train_components,Y_train)
+        #neigh_uni = KNeighborsClassifier(n_neighbors=28)#uniform weights
+        neigh_dis = KNeighborsClassifier(n_neighbors=28,weights='distance')#weights based on distance
         neigh_dis.fit(train_components,Y_train)
+        Y_pred = neigh_dis.predict(test_components)
 
-        Yu_pred = neigh_uni.predict(test_components)
-        acc_uni = accuracy_score(Y_test,Yu_pred)
-        Yd_pred = neigh_dis.predict(test_components)
-        acc_dis = accuracy_score(Y_test,Yd_pred)
+        y_score = neigh_dis.predict_proba(test_components)#scores for stats
+        acc = accuracy_score(Y_test,Y_pred)
+        auc = roc_auc_score(Y_test,y_score[:,1])
+        kappa_score = cohen_kappa_score(Y_test,Y_pred)
 
-        print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
+        accuracy.append(acc)
+        auroc.append(auc)
+        kappa.append(kappa_score)
 
-        results_uni.append(acc_uni)
-        results_dis.append(acc_dis)
 
+
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+
+    return results
+
+
+
+
+        #print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
+
+"""
     n = [i for i in range(1,101)]
     plt.figure(1)#Accuracy and number of neighbors
     plt.plot(n[:15],results_uni,color='b')
     plt.plot(n[:15],results_dis,color='r')
-    plt.suptitle('Accuracy and Number of Components')
+    plt.suptitle('Accuracy and Number of Components with PCA')
     plt.xlabel('Number of Components')
     plt.ylabel('Accuracy')
-    plt.show()
-#testing number of neighbors and uniform vs distance weighting - distance weighting looks slightly better
-    for n in range(1,101):#number of neighbors to be tested
-
-        neigh_uni = KNeighborsClassifier(n_neighbors=n)#uniform weights
-        neigh_dis = KNeighborsClassifier(n_neighbors=n,weights='distance')#weights based on distance
-
-        neigh_uni.fit(X_train,Y_train)
-        neigh_dis.fit(X_train,Y_train)
-
-        Yu_pred = neigh_uni.predict(X_test)
-        acc_uni = accuracy_score(Y_test,Yu_pred)
-        Yd_pred = neigh_dis.predict(X_test)
-        acc_dis = accuracy_score(Y_test,Yd_pred)
-
-        print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
-
-        results_uni.append(acc_uni)
-        results_dis.append(acc_dis)
-        #3 Neighbors is the best for uniform! sharp drop from 3-4 for uniform, 3-4 for distance is good
-
-    n = [i for i in range(1,101)]
-    plt.figure(1)#Accuracy and number of neighbors
-    plt.plot(n[:100],results_uni[:100],color='b')
-    plt.plot(n[:100],results_dis[:100],color='r')
-    plt.suptitle('Accuracy and Number of Neighbors')
-    plt.xlabel('Number of Neighbors')
-    plt.ylabel('Accuracy')
-    plt.show()
-#tested kd and ball tree, no difference with leaf size
-    for n in range(1,101):#number of leaf size to be tested
-
-        neigh_uni = KNeighborsClassifier(n_neighbors=3,algorithm='kd_tree',leaf_size=n)#uniform weights
-        neigh_dis = KNeighborsClassifier(n_neighbors=3,weights='distance',algorithm='kd_tree',leaf_size=n)#weights based on distance
-
-        neigh_uni.fit(X_train,Y_train)
-        neigh_dis.fit(X_train,Y_train)
-
-        Yu_pred = neigh_uni.predict(X_test)
-        acc_uni = accuracy_score(Y_test,Yu_pred)
-        Yd_pred = neigh_dis.predict(X_test)
-        acc_dis = accuracy_score(Y_test,Yd_pred)
-
-        print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
-
-        results_uni.append(acc_uni)
-        results_dis.append(acc_dis)
-        #3 Neighbors is the best for uniform! sharp drop from 3-4 for uniform, 3-4 for distance is good
-
-    n = [i for i in range(1,101)]
-    plt.figure(1)#Accuracy and number of neighbors
-    plt.plot(n[:100],results_uni[:100],color='b')
-    plt.plot(n[:100],results_dis[:100],color='r')
-    plt.suptitle('Accuracy and Leaf Size (3 Neighbors)')
-    plt.xlabel('Leaf Size')
-    plt.ylabel('Accuracy')
-    plt.show()
+    plt.show()"""
 
 
-
-    return
 
 
 def Neural(X_train,X_test,Y_train,Y_test):
@@ -354,20 +348,244 @@ def SVM(X_train,X_test,Y_train,Y_test):
     return
 
 
+def EvalResults(result_list):#pass in list with [[acc],[auroc],[kappa]]
+#show Plots
+#return best option
+    accuracies = result_list[0][0]
+    auroc = result_list[0][1]
+    kappa = result_list[0][2]
+    #print accuracies
+    div = len(result_list)
+    for i in range(1,div):
+        accuracies += result_list[i][0]
+        auroc += result_list[i][1]
+        kappa += result_list[i][2]
+
+    accuracies = accuracies/div
+    auroc = auroc/div
+    kappa = kappa/div
+
+    x=[i for i in range(1,len(accuracies)+1)]
+
+    plt.plot(x,accuracies,'r')
+    plt.plot(x,auroc,'b')
+    plt.plot(x,kappa,'g')
+    plt.show()
+    #now find optimal number
+    maxVal = accuracies[0] + auroc[0] + kappa[0]
+    ind = 0
+    for i in range(len(accuracies)):
+        new = accuracies[i] + auroc[i] + kappa[i]
+        if new > maxVal:
+            maxVal = new
+            ind = i
+
+    ind += 1
+
+    return ind
+
+def Forests(X_train,X_test,Y_train,Y_test,n_estimators):
+    results = []
+
+
+
+    print results
+
+
+
+
+
+
+    x = []
+    y = []
+    for i in range(len(results)):
+        #print results[i][0:2]
+        x.append(results[i][0])#number of estimators
+        y.append(results[i][1])#accuracy
+    #for i in range(len(t_results)):
+    #    tx.append(t_results[i][0])
+    #    ty.append(t_results[i][1])
+
+
+    plt.figure(1)#Accuracy and number of estimators
+    plt.plot(x[:100],y[:100])
+    plt.suptitle('Accuracy and Number of Estimators')
+    plt.xlabel('Number of Estimators')
+    plt.ylabel('Accuracy')
+    plt.figure(2)#Feauture importances from most recent
+    plt.suptitle('Feature Importances')
+    plt.barh(X_train.columns.values,rfc.feature_importances_)
+    plt.show()
+
+
+#max from results is 37?
+#feature importance lowest is median fee then average difficulty
+
+    return
+
+def Neighbors(X_train,X_test,Y_train,Y_test,n_neighbors):
+    results = []
+
+    #pca doesn't work too well
+    for n in range(1,len(X_train.columns)):#number of components to be tested
+
+        #first scale our attributes
+        scaler = StandardScaler()
+        scaler.fit(X_train)
+        x_train = scaler.transform(X_train)
+        x_test = scaler.transform(X_test)
+        pca = PCA(n_components=n)
+        pca.fit(x_train)
+        train_components = pca.transform(x_train)#now reduce dimensionality
+        test_components = pca.transform(x_test)
+
+        neigh_uni = KNeighborsClassifier(n_neighbors=3)#uniform weights
+        neigh_dis = KNeighborsClassifier(n_neighbors=3,weights='distance')#weights based on distance
+
+        neigh_uni.fit(train_components,Y_train)
+        neigh_dis.fit(train_components,Y_train)
+
+        Yu_pred = neigh_uni.predict(test_components)
+        acc_uni = accuracy_score(Y_test,Yu_pred)
+        Yd_pred = neigh_dis.predict(test_components)
+        acc_dis = accuracy_score(Y_test,Yd_pred)
+
+        print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
+
+        results_uni.append(acc_uni)
+        results_dis.append(acc_dis)
+
+    n = [i for i in range(1,101)]
+    plt.figure(1)#Accuracy and number of neighbors
+    plt.plot(n[:15],results_uni,color='b')
+    plt.plot(n[:15],results_dis,color='r')
+    plt.suptitle('Accuracy and Number of Components with PCA')
+    plt.xlabel('Number of Components')
+    plt.ylabel('Accuracy')
+    plt.show()
+#testing number of neighbors and uniform vs distance weighting - distance weighting looks slightly better
+    for n in range(1,101):#number of neighbors to be tested
+
+        neigh_uni = KNeighborsClassifier(n_neighbors=n)#uniform weights
+        neigh_dis = KNeighborsClassifier(n_neighbors=n,weights='distance')#weights based on distance
+
+        neigh_uni.fit(X_train,Y_train)
+        neigh_dis.fit(X_train,Y_train)
+
+        Yu_pred = neigh_uni.predict(X_test)
+        acc_uni = accuracy_score(Y_test,Yu_pred)
+        Yd_pred = neigh_dis.predict(X_test)
+        acc_dis = accuracy_score(Y_test,Yd_pred)
+
+        print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
+
+        results_uni.append(acc_uni)
+        results_dis.append(acc_dis)
+        #3 Neighbors is the best for uniform! sharp drop from 3-4 for uniform, 3-4 for distance is good
+
+    n = [i for i in range(1,101)]
+    plt.figure(1)#Accuracy and number of neighbors
+    plt.plot(n[:100],results_uni[:100],color='b')
+    plt.plot(n[:100],results_dis[:100],color='r')
+    plt.suptitle('Accuracy and Number of Neighbors')
+    plt.xlabel('Number of Neighbors')
+    plt.ylabel('Accuracy')
+    plt.show()
+#tested kd and ball tree, no difference with leaf size
+    for n in range(1,101):#number of leaf size to be tested
+
+        neigh_uni = KNeighborsClassifier(n_neighbors=3,algorithm='kd_tree',leaf_size=n)#uniform weights
+        neigh_dis = KNeighborsClassifier(n_neighbors=3,weights='distance',algorithm='kd_tree',leaf_size=n)#weights based on distance
+
+        neigh_uni.fit(X_train,Y_train)
+        neigh_dis.fit(X_train,Y_train)
+
+        Yu_pred = neigh_uni.predict(X_test)
+        acc_uni = accuracy_score(Y_test,Yu_pred)
+        Yd_pred = neigh_dis.predict(X_test)
+        acc_dis = accuracy_score(Y_test,Yd_pred)
+
+        print "N:",n, "Uniform accuracy:", acc_uni, "Distance accuracy:", acc_dis
+
+        results_uni.append(acc_uni)
+        results_dis.append(acc_dis)
+        #3 Neighbors is the best for uniform! sharp drop from 3-4 for uniform, 3-4 for distance is good
+
+    n = [i for i in range(1,101)]
+    plt.figure(1)#Accuracy and number of neighbors
+    plt.plot(n[:100],results_uni[:100],color='b')
+    plt.plot(n[:100],results_dis[:100],color='r')
+    plt.suptitle('Accuracy and Leaf Size (3 Neighbors)')
+    plt.xlabel('Leaf Size')
+    plt.ylabel('Accuracy')
+    plt.show()
+
+
+
+    return
+
 
 
 def RunModels():
-#INCLUDES RANDOM FOREST AND NEAREST NEIGHBORS (sklearn.neighbors)
-#RUNS WITH 5 FOLDS AND COMPARES ACCURACY
-#TO DO: PICK OUT A FEW MORE MODELS, TEST WITH DIFFERENT PARAMETERS (# Folds?, # trees? etc)
-
-    data = GetData() #list of [X_train,X_test,Y_train,Y_test]
+    bitcoin = GetData() #dataframe with all features
+    data = PrepData(bitcoin)
     X_train,X_test,Y_train,Y_test = data[0],data[1],data[2],data[3]
+    #res = ForestTester(X_train,X_test,Y_train,Y_test)
+    #print res
+#lets do 10 iterations of testing
+    #NumberNeighborsTester(X_train,X_test,Y_train,Y_test)
+    forestRes = []
+    numberNeigh = []
+    PCANeigh = []
+    for i in range(10):
+        data = PrepData(bitcoin) #list of [X_train,X_test,Y_train,Y_test]
+        X_train,X_test,Y_train,Y_test = data[0],data[1],data[2],data[3]
 
-    Forests(X_train,X_test,Y_train,Y_test)
-    Neighbors(X_train,X_test,Y_train,Y_test)
-    Neural(X_train,X_test,Y_train,Y_test)
-    SVM(X_train,X_test,Y_train,Y_test)
+        a = NumberNeighborsTester(X_train,X_test,Y_train,Y_test)
+        b = PCANeighborsTester(X_train,X_test,Y_train,Y_test)
+        numberNeigh.append(a)
+        PCANeigh.append(b)
+
+        """res = ForestTester(X_train,X_test,Y_train,Y_test)
+        forestRes.append(res)
+        #Neighbors(X_train,X_test,Y_train,Y_test)
+        #Neural(X_train,X_test,Y_train,Y_test)
+        #SVM(X_train,X_test,Y_train,Y_test)
+
+    ind = EvalResults(forestRes)
+    print ind"""
+    #print numberNeigh
+    num = EvalResults(numberNeigh)
+    print "Optimal number of neighbors:",num
+    num = EvalResults(PCANeigh)
+    print "Optimal number of components from PCA:",num
+    """accuracies = forestRes[0][0]
+    auroc = forestRes[0][1]
+    kappa = forestRes[0][2]
+    #print accuracies
+    div = len(forestRes)
+    for i in range(1,div):
+        accuracies += forestRes[i][0]
+        auroc += forestRes[i][1]
+        kappa += forestRes[i][2]
+
+    accuracies = accuracies/div
+    auroc = auroc/div
+    kappa = kappa/div
+
+    x=[i for i in range(1,len(accuracies)+1)]
+
+    plt.plot(x,accuracies,'r')
+    plt.plot(x,auroc,'b')
+    plt.plot(x,kappa,'g')
+    plt.show()"""
+
+
+
+    #print 'accuracies',accuracies,'auroc',auroc,'kappa',kappa
+
+    #print len(forestRes)
+    #print len(forestRes[0])
 
     #maybe try having the functions return their raw results - predictions
     #add repeated hold out with a for loop

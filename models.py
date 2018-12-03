@@ -6,13 +6,15 @@ import matplotlib.patches      as mpatches
 
 from sklearn.model_selection   import cross_val_score
 from sklearn.model_selection   import KFold
-from sklearn.metrics           import accuracy_score, roc_auc_score, cohen_kappa_score
+from sklearn.metrics           import accuracy_score, roc_auc_score, cohen_kappa_score, precision_score
 from sklearn.ensemble          import RandomForestClassifier
 from sklearn.neighbors         import KNeighborsClassifier
 from sklearn.preprocessing     import StandardScaler
 from sklearn.decomposition     import PCA
 from sklearn.neural_network    import MLPClassifier
 from sklearn.svm               import SVC
+
+from scipy.stats               import ttest_rel
 
 
 
@@ -80,6 +82,7 @@ def ForestTester(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
     #t_results = []
     for n in range(1,101):  #for number of estimators
         #build forest
@@ -95,12 +98,15 @@ def ForestTester(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
         #print "n:",n, acc
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
 
     return results
@@ -111,6 +117,7 @@ def NumberNeighborsTester(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
 
     for n in range(1,101):#number of neighbors to be tested
 
@@ -126,14 +133,15 @@ def NumberNeighborsTester(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
         #print "n:",n, acc
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
-
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
     return results
 
@@ -177,6 +185,7 @@ def PCANeighborsTester(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
     for n in range(1,len(X_train.columns)):#number of components to be tested
 
         #first scale our attributes
@@ -198,14 +207,16 @@ def PCANeighborsTester(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
 
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
     return results
 
@@ -231,6 +242,7 @@ def NeuralTester1(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
 
     #first scale our attributes
     scaler = StandardScaler()
@@ -247,13 +259,15 @@ def NeuralTester1(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
 
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
     return results
 
@@ -262,6 +276,7 @@ def NeuralTester2(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
 
     #first scale our attributes
     scaler = StandardScaler()
@@ -278,13 +293,15 @@ def NeuralTester2(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
 
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
     return results
 
@@ -293,6 +310,7 @@ def NeuralTester3(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
 
     #first scale our attributes
     scaler = StandardScaler()
@@ -309,13 +327,15 @@ def NeuralTester3(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
 
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
     return results
 
@@ -324,6 +344,7 @@ def NeuralTester4(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
 
     #first scale our attributes
     scaler = StandardScaler()
@@ -340,13 +361,15 @@ def NeuralTester4(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
 
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
     return results
 
@@ -355,6 +378,7 @@ def NeuralTester5(X_train,X_test,Y_train,Y_test):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
 
     #first scale our attributes
     scaler = StandardScaler()
@@ -371,13 +395,15 @@ def NeuralTester5(X_train,X_test,Y_train,Y_test):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
 
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
 
     return results
 
@@ -386,6 +412,7 @@ def NeuralTesterFin(X_train,X_test,Y_train,Y_test,n1,n2,n3,n4,n5):
     accuracy = []
     auroc = []
     kappa = []
+    precision = []
 
     #first scale our attributes
     scaler = StandardScaler()
@@ -416,14 +443,16 @@ def NeuralTesterFin(X_train,X_test,Y_train,Y_test,n1,n2,n3,n4,n5):
         acc = accuracy_score(Y_test,Y_pred)
         auc = roc_auc_score(Y_test,y_score[:,1])
         kappa_score = cohen_kappa_score(Y_test,Y_pred)
+        prec = precision_score(Y_test,Y_pred)
 
         accuracy.append(acc)
         auroc.append(auc)
         kappa.append(kappa_score)
+        precision.append(prec)
 
 
-    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa)]
-    print results
+    results = [np.asarray(accuracy),np.asarray(auroc),np.asarray(kappa),np.asarray(precision)]
+    #print results
 
     return results
 
@@ -451,17 +480,20 @@ def EvalResults(result_list,title='',xlab='',ylab='Accuracy'):#pass in list with
     accuracies = np.asarray(result_list[0][0])
     auroc = np.asarray(result_list[0][1])
     kappa = np.asarray(result_list[0][2])
+    precision = np.asarray(result_list[0][3])
     #print "Accuracies from assignment:",accuracies
     div = len(result_list)
     for i in range(1,div):
         accuracies += result_list[i][0]
         auroc += result_list[i][1]
         kappa += result_list[i][2]
+        precision += result_list[i][3]
 
     #print "Accuracies before dividing:",accuracies
     accuracies = accuracies/div
     auroc = auroc/div
     kappa = kappa/div
+    precision = precision/div
 
     #accuracies = np.asarray(accuracies)
     #print "Accuracies after dividing:",accuracies
@@ -471,27 +503,40 @@ def EvalResults(result_list,title='',xlab='',ylab='Accuracy'):#pass in list with
     plt.plot(x,accuracies,'r')
     plt.plot(x,auroc,'b')
     plt.plot(x,kappa,'g')
+    plt.plot(x,precision,'black',ls='--')
     red_patch = mpatches.Patch(color='red', label='Accuracy')
     blue_patch = mpatches.Patch(color='blue', label='AUROC')
     green_patch = mpatches.Patch(color='green', label='Kappa')
-    plt.legend(handles=[red_patch,blue_patch,green_patch])
+    black_patch = mpatches.Patch(color='black', label='Precision')
+    plt.legend(handles=[red_patch,blue_patch,green_patch,black_patch])
     plt.suptitle(title)
     plt.xlabel(xlab)
     plt.ylabel(ylab)
 
     plt.show()
     #now find optimal number
-    maxVal = accuracies[0] + auroc[0] + kappa[0]
+    maxVal = accuracies[0] + auroc[0] + kappa[0] + precision[0]
     ind = 0
     for i in range(len(accuracies)):
-        new = accuracies[i] + auroc[i] + kappa[i]
+        new = accuracies[i] + auroc[i] + kappa[i] + precision[i]
         if new > maxVal:
             maxVal = new
             ind = i
 
     ind += 1
+    print title
+    accs = [result_list[i][0] for i in range(len(result_list))] #get accuracies
+    #print 'accs',accs
+    for i in range(len(accs)):  #do t paired t test to compare with chosen
+        if ((ind-1==i) or (ind-1 not in range(len(accs)))):
+            pass
+        else:
+            print ind,i+1
+            print ttest_rel(accs[ind-1],accs[i])
+
 
     return ind
+
 
 def Forests(X_train,X_test,Y_train,Y_test,n):
     results = []

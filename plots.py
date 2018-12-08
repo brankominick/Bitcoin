@@ -1,3 +1,4 @@
+from __future__                import division
 import numpy
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ from sklearn.preprocessing     import PolynomialFeatures
 from sklearn.pipeline          import make_pipeline
 from sklearn.model_selection   import KFold
 from sklearn.metrics           import mean_squared_error
-from __future__                import division
+
 
 
 #LOAD IN FILE
@@ -20,7 +21,7 @@ bitcoin = btc.parse("btc (2)")
 
 print bitcoin
 
-#PLOT PRICES AGAINST TIME
+#PLOT PRICES AGAINST TIME (for training data)
 
 bitcoin.plot(x='date', y='price(USD)')
 plt.title('Price of Bitcoin (4/28/13 - 9/16/18)')
@@ -28,9 +29,15 @@ plt.xlabel('Date')
 plt.ylabel('Price')
 plt.show()
 
+btc = bitcoin.tail(n=10)
+btc.plot(x='date', y='price(USD)')
+plt.title('Price of Bitcoin Over Ten Days')
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.show()
 
 
-
+#maybe we want some other time frames too - smaller and larger
 
 
 
